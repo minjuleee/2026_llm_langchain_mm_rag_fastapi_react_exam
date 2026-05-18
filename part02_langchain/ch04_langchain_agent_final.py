@@ -175,6 +175,60 @@ tools_map = {
 # bind_tools() : LLM에게 사용 가능한 Tool 목록을 알려주는 함수
 llm_with_tools = llm.bind_tools(tool_list)
 
+# LLM 호출해달라는 tool을 실행해주는 함수
+def execute_tool_calls(tool_calls: list) -> list :
+  """
+    LLM이 요청한 tool_calls를 실제로 실행하고
+    ToolMessage 리스트로 변환합니다.
+    Args:
+        tool_calls:
+            AIMessage.tool_calls에 들어 있는 Tool 호출 요청 목록
+            예:
+            [
+              {
+                "id": "call_abc123",
+                "name": "get_risk_summary",
+                "args": {
+                  "results_json": "..."
+                }
+              }
+            ]
+    Returns:
+        ToolMessage 리스트
+  """
+  tool_messages = []
+  
+  for tc in tool_calls :
+    tool_name = tc['name']  # 호출할 tool 이름 
+    tool_args = tc['args']  # tool을 호출할 때 필요한 매개변수
+    
+    # LLM에게 ToolMessage 리스트를 줄 때 어떤 Tool에 대한 호출 결과인지를 알려주기 위해
+    tool_id = tc['id'] 
+    
+    # 디버깅 및 수업 시연용 출력입니다.
+    print(f"    🔧 Tool 실행: {tool_name}({list(tool_args.keys())})")
+    
+    # 문자열 tool 이름으로 실제 tool객체를 찾아 실행
+    result = tools_map[tool_name].invoke(tool_args)
+
+    # Tool 실행 결과를 ToolMessage로 감쌉니다.
+    #
+    # content:
+    #   Tool 실행 결과
+    #
+    # tool_call_id:
+    #   response.tool_calls 안에 있던 id와 반드시 일치해야 합니다.
+    tool_messages.append(
+        ToolMessage(
+            content=result,
+            tool_call_id=tool_id,
+        )
+    )
+    # ToolMessage 리스트를 반환합니다.
+    return tool_messages
+    
+  
+
 
 
 class CCTVLLMAgent :
@@ -271,16 +325,21 @@ class CCTVLLMAgent :
     #   -> response.content에 바로 답변 생성
     #
     # 2. Tool이 필요하다고 판단
-    #   -> response.tool_calls에 Tool 호출 요청 생성
+    #   -> response.tool_calls에 답변 작성을 위해 어떤 툴이 필요한지 Tool 호출 요청 생성
     print("  💭 LLM 판단 중...", end=" ", flush=True)
     response = llm_with_tools.invoke(messages)
     print("완료")
     
-    
-    
-    
-    
-    
+    if response.tool_calls :  # Tool이 필요하다고 판단
+      #  LLM이 선택한 Tool 이름을 확인합니다.
+      print(f"  🔍 Tool 선택: {[tc['name'] for tc in response.tool_calls]}")
+      
+      # LLM이 답변한 내용을 대화 이력에 추가. (LLM api는 기억이 없다)
+      messages.append(response)
+      
+      # LLM이 호출을 요청한 tool을 실제 실행
+      execute_tool_calls(response.tool_calls)
+      
 
 if __name__ == "__main__" :
 
