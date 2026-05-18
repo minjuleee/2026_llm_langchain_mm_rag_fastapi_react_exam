@@ -7,7 +7,6 @@
 #   실제 LLM이 사용자의 자연어 질문을 읽고
 #   어떤 Tool을 사용할지 스스로 판단하게 만드는 것입니다.
 
-#
 
 # 핵심 흐름:
 #   1. 사용자가 질문한다.
@@ -17,30 +16,10 @@
 #   5. Tool 실행 결과를 ToolMessage로 다시 LLM에게 전달한다.
 #   6. LLM이 Tool 결과를 읽고 최종 자연어 답변을 만든다.
 
-#
-
 # 실행 전 준비:
 #   pip install langchain-openai langchain-core python-dotenv
 #
 
-# .env 파일 예:
-#   OPENAI_API_KEY=sk-...
-#
-
-# Mock 버전과 비교했을 때 달라진 점:
-#   - LLM의 tool_calls 판단으로 호출할 tool을 결정하는 부분
-#   - LLM의 최종 답변 생성으로 대체
-#   - Tool 함수 자체는 그대로 재사용 가능
-
-# ─────────────────────────────────────────────────────────────
-
-# json:
-#   Python 객체(dict, list)를 JSON 문자열로 바꾸거나,
-#   JSON 문자열을 다시 Python 객체로 바꿀 때 사용합니다.
-#
-
-# load_dotenv:
-#   .env 파일에 적어둔 환경변수를 현재 Python 실행 환경으로 불러옵니다.
 
 import json
 
@@ -56,3 +35,58 @@ from langchain_core.messages import (
 )
 
 load_dotenv()
+
+# 1. LLM 초기화
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0,
+)
+
+if __name__ == "__main__" :
+
+  import random
+  random.seed(42)
+
+  # CCTV 위치 목록
+  LOCATIONS = [
+    "주차장 A",
+    "창고 출입구",
+    "로비",
+    "비상구 복도",
+    "옥상",
+  ]     
+  
+  results = [
+    {
+      "frame_id": i,
+      "risk_level": "위험" if i % 4 == 0 else ("주의" if i % 3 == 0 else "정상"),
+      "person_count": random.randint(0, 4),
+      "reason": "심야 다인 탐지" if i % 4 == 0 else "일반",
+      "action": "경비팀 출동" if i % 4 == 0 else "이상 없음",
+    }
+    for i in range(1, 11)
+  ]
+
+  # 원본 탐지 프레임 데이터 생성
+  frames = [
+    {
+      "frame_id": i,
+      "timestamp": f"0{2 if i % 3 == 0 else 1}:{i % 60:02d}",
+      "location": LOCATIONS[i % len(LOCATIONS)],
+      "detections": [
+        {
+          "class": "person",
+          "bbox": [10, 10, 100, 100],
+          "confidence": 0.91,
+        }
+        for _ in range(random.randint(0, 3))
+      ],
+    }
+    for i in range(1, 11)
+  ]
+  
+  results_json = json.dumps(results, ensure_ascii=False)
+  frames_json = json.dumps(frames, ensure_ascii=False)
+  
+  
+
