@@ -156,11 +156,25 @@ def filter_danger_frames(results_json: str) -> str:
         ensure_ascii=False,
     )
 
-
-
+# LLM에게 제공할 tool 목록
 tool_list = [
-
+  get_risk_summary,
+  count_objects_in_zone,
+  filter_danger_frames,
 ]
+
+# LLM의 tool_calls에는 Tool 이름이 문자열로 들어옵니다
+# "name" : "get_risk_summary"
+# Tool 이름으로 실제 Tool 객체를 빠르게 찾을 수 있음
+# 딕셔너리를 만들어 둡니다
+tools_map = {
+  t.name : t for t in  tool_list
+}
+
+# LLM에 Tool 등록 : bind_tools()
+# bind_tools() : LLM에게 사용 가능한 Tool 목록을 알려주는 함수
+llm_with_tools = llm.bind_tools(tool_list)
+
 
 
 class CCTVLLMAgent :
