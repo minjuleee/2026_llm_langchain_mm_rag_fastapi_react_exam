@@ -42,42 +42,42 @@ llm = ChatOpenAI(
     temperature=0,
 )
 
-"""
-  실제 ChatOpenAI를 사용하는 CCTV 분석 Agent입니다.
-  이 Agent는 다음 작업을 수행합니다.
-  1. 사용자 질문을 받습니다.
-  2. LLM에게 질문과 분석 데이터를 전달합니다.
-  3. LLM이 Tool 사용 여부를 판단합니다.        (Thought)
-  4. Tool이 필요하면 실제 Tool을 실행합니다.    (Action)
-  5. Tool 결과를 다시 LLM에게 전달합니다.       (Observation)
-  6. LLM이 최종 자연어 답변을 생성합니다.
-
-  Mock Agent와 비교:
-      Mock Agent:
-          개발자가 if문으로 Tool을 선택합니다.
-      LLM Agent:
-          LLM이 자연어 질문을 읽고 Tool을 선택합니다.
-"""
-  
-# LLM에게 알려줄 역할과 Tool 선택 기준입니다.
-SYSTEM_PROMPT = """당신은 CCTV 보안 분석 AI 어시스턴트입니다.
-운영자의 질문에 답변하기 위해 제공된 Tool을 적절히 활용하세요.
-데이터 구분:
-- results_json: risk_level, reason, action 등 위험도 분석 결과
-- frames_json : location, detections, bbox 등 원본 탐지 결과
-
-Tool 선택 기준:
-- 전체 요약, 위험 건수 질문 → get_risk_summary
-- 특정 구역 탐지 현황 질문 → count_objects_in_zone
-- 위험 프레임 목록 질문   → filter_danger_frames
-
-중요:
-- 위험도, 위험 프레임, risk_level 관련 질문에는 results_json을 사용하세요.
-- 구역, 위치, detections, bbox 관련 질문에는 frames_json을 사용하세요.
-답변은 한국어로, 핵심 수치를 포함해 명확하게 작성하세요."""
 
 
 class CCTVLLMAgent :
+  """
+    실제 ChatOpenAI를 사용하는 CCTV 분석 Agent입니다.
+    이 Agent는 다음 작업을 수행합니다.
+    1. 사용자 질문을 받습니다.
+    2. LLM에게 질문과 분석 데이터를 전달합니다.
+    3. LLM이 Tool 사용 여부를 판단합니다.        (Thought)
+    4. Tool이 필요하면 실제 Tool을 실행합니다.    (Action)
+    5. Tool 결과를 다시 LLM에게 전달합니다.       (Observation)
+    6. LLM이 최종 자연어 답변을 생성합니다.
+
+    Mock Agent와 비교:
+        Mock Agent:
+            개발자가 if문으로 Tool을 선택합니다.
+        LLM Agent:
+            LLM이 자연어 질문을 읽고 Tool을 선택합니다.
+  """
+    
+  # LLM에게 알려줄 역할과 Tool 선택 기준입니다.
+  SYSTEM_PROMPT = """당신은 CCTV 보안 분석 AI 어시스턴트입니다.
+  운영자의 질문에 답변하기 위해 제공된 Tool을 적절히 활용하세요.
+  데이터 구분:
+  - results_json: risk_level, reason, action 등 위험도 분석 결과
+  - frames_json : location, detections, bbox 등 원본 탐지 결과
+
+  Tool 선택 기준:
+  - 전체 요약, 위험 건수 질문 → get_risk_summary
+  - 특정 구역 탐지 현황 질문 → count_objects_in_zone
+  - 위험 프레임 목록 질문   → filter_danger_frames
+
+  중요:
+  - 위험도, 위험 프레임, risk_level 관련 질문에는 results_json을 사용하세요.
+  - 구역, 위치, detections, bbox 관련 질문에는 frames_json을 사용하세요.
+  답변은 한국어로, 핵심 수치를 포함해 명확하게 작성하세요."""
   
   def __init__(self, results_json, frames_json) :
     """
@@ -98,6 +98,54 @@ class CCTVLLMAgent :
     # Agent의 실행 이력을 저장하는 공간 (디버깅 용도)
     # 각 질문마다 (qeury, tool_calls, answer) 등의 정보를 기록
     self.scratchpad = []
+
+
+  def run(self, query : str) -> str :
+    """
+      Agent 실행 메서드입니다.
+
+      Args:
+          query:
+            사용자의 자연어 질문
+      Returns:
+        LLM이 생성한 최종 답변 문자열
+    """
+    print(f"\n  📌 질문: {query}")
+    
+    # 1단계: 메시지 구성 (LLM에게 전달할 프롬프트 조립)
+    #
+    # SystemMessage:
+    #   LLM의 역할과 규칙을 알려줍니다.
+    #
+    # HumanMessage:
+    #   사용자의 질문과 분석 데이터를 함께 전달합니다.
+    #
+    # 데이터를 함께 넣는 이유:
+    #   LLM이 Tool을 호출할 때 필요한 인자를 구성해야 하기 때문입니다.
+    messages = [
+      SystemMessage(content=self.SYSTEM_PROMPT),
+      HumanMessage(
+        content=f"{query}\n\n"
+        f"[분석데이터]\n"
+        f"results_json : {self.results_json}\n"
+        f"frames_json : {self.frames_json}"
+      ),
+    ]
+    
+    # 2단계 : LLM 호출 - Tool 선택 단계
+    # [결과] 
+    # 1. Tool이 필요 없다고 판단
+    #   -> response.content에 바로 답변 생성
+    #
+    # 2. Tool이 필요하다고 판단
+    #   -> response.tool_calls에 Tool 호출 요청 생성
+    print("  💭 LLM 판단 중...", end=" ", flush=True)
+    response = llm_with_tools.invoke(messages)
+    print("완료")
+    
+    
+    
+    
     
     
 
