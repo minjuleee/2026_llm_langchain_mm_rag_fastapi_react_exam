@@ -42,6 +42,125 @@ llm = ChatOpenAI(
     temperature=0,
 )
 
+# 2. Tool 함수 정의
+@tool
+def get_risk_summary(results_json: str) -> str:
+  """
+  CCTV 분석 결과 전체를 요약합니다.
+  위험/주의/정상 건수와 위험 프레임 ID 목록을 반환합니다.
+  운영자가 "전체 요약", "위험 몇 건" 등을 물을 때 사용하세요.
+  Args:
+      results_json: risk_level이 포함된 CCTV 분석 결과 JSON 문자열
+  Returns:
+      위험/주의/정상 건수와 위험 프레임 ID 목록을 담은 JSON 문자열
+  """
+
+  # JSON 문자열을 Python 리스트로 변환합니다.
+  data = json.loads(results_json)
+  # 위험도별 개수를 저장할 딕셔너리입니다.
+  counts = {
+      "위험": 0,
+      "주의": 0,
+      "정상": 0,
+  }
+
+  # 위험 등급 프레임 ID만 따로 저장합니다.
+  danger_ids = []
+  # 분석 결과를 하나씩 확인합니다.
+  for r in data:
+      # risk_level 값이 없으면 기본값으로 "정상"을 사용합니다.
+      lv = r.get("risk_level", "정상")
+      # 해당 위험도 개수를 1 증가시킵니다.
+      counts[lv] = counts.get(lv, 0) + 1
+      # 위험 등급이면 frame_id를 따로 기록합니다.
+      if lv == "위험":
+          danger_ids.append(r["frame_id"])
+  # 결과를 JSON 문자열로 반환합니다.
+  # ensure_ascii=False를 사용해야 한글이 깨지지 않습니다.
+  return json.dumps(
+      {
+          **counts,   # 딕셔너리에 들어있는 item을 풀어서 넣어줌
+          "위험_프레임_ids": danger_ids,
+      },
+      ensure_ascii=False,
+  )
+
+@tool
+def count_objects_in_zone(frames_json: str, zone: str) -> str:
+    """
+    특정 구역(zone)에서 탐지된 객체 수를 집계합니다.
+    "창고 출입구 탐지 건수", "주차장 A 인원" 등의 질문에 사용하세요.
+    zone 파라미터에는 구역 이름을 정확히 입력하세요.
+    Args:
+        frames_json: location, detections 정보가 포함된 원본 프레임 JSON 문자열
+        zone: 집계할 구역 이름
+    Returns:
+        해당 구역의 프레임 수, 전체 탐지 수, 프레임당 평균 탐지 수 JSON 문자열
+    """
+
+    # JSON 문자열을 Python 리스트로 변환합니다.
+    data = json.loads(frames_json)
+    # 사용자가 요청한 구역과 location이 같은 프레임만 모읍니다.
+    zone_frames = [
+        f for f in data
+        if f["location"] == zone
+    ]
+
+    # 해당 구역 프레임들에서 탐지된 객체 수를 모두 더합니다.
+    total = sum(
+        len(f["detections"])
+        for f in zone_frames
+    )
+
+    # 프레임당 평균 탐지 수를 계산합니다.
+    # zone_frames가 비어 있으면 0으로 나누는 오류를 막기 위해 0을 반환합니다.
+    avg = round(total / len(zone_frames), 1) if zone_frames else 0
+    # 집계 결과를 JSON 문자열로 반환합니다.
+    return json.dumps(
+        {
+            "zone": zone,
+            "frame_count": len(zone_frames),
+            "total_detections": total,
+            "avg_per_frame": avg,
+        },
+        ensure_ascii=False,
+    )
+
+@tool
+def filter_danger_frames(results_json: str) -> str:
+    """
+    위험(risk_level = '위험') 등급 프레임만 필터링해서 반환합니다.
+    "위험 프레임 목록", "위험한 것만 뽑아줘" 등의 질문에 사용하세요.
+    Args:
+        results_json: risk_level이 포함된 CCTV 분석 결과 JSON 문자열
+    Returns:
+        위험 등급 프레임 목록 JSON 문자열
+    """
+    # frames_json:
+    #   location, detections, bbox 중심 데이터
+    
+    # results_json:
+    #   risk_level, reason, action 중심 데이터
+    
+    # 따라서 위험 프레임을 필터링할 때는 results_json을 받아야 합니다.
+    data = json.loads(results_json)
+    # risk_level이 "위험"인 프레임만 추립니다.
+    danger = [
+        r for r in data
+        if r.get("risk_level") == "위험"
+    ]
+
+    # 위험 프레임 목록을 JSON 문자열로 반환합니다.
+    return json.dumps(
+        danger,
+        ensure_ascii=False,
+    )
+
+
+
+tool_list = [
+
+]
 
 
 class CCTVLLMAgent :
