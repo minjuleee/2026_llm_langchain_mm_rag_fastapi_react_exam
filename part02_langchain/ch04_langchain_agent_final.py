@@ -432,3 +432,21 @@ if __name__ == "__main__" :
   frames_json = json.dumps(frames, ensure_ascii=False)
   
   agent = CCTVLLMAgent(results_json=results_json, frames_json=frames_json)
+  
+  # 테스트 질문 목록입니다.
+  queries = [
+      "위험 프레임 요약해줘",
+      "창고 출입구 탐지 카운트 알려줘",
+      "위험 프레임 목록 뽑아줘",
+  ]
+
+  # 시나리오 실행 시작
+  print("=" * 50)
+  print("  CCTV LLM Agent 시나리오")
+  print("=" * 50)
+
+  # 질문을 하나씩 실행합니다.
+  for q in queries:
+      answer = agent.run(q)
+      print(f"\n  최종 답변:\n  {answer}\n")
+      print("─" * 50)
