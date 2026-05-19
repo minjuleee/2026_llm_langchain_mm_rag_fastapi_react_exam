@@ -432,6 +432,3 @@ if __name__ == "__main__" :
   frames_json = json.dumps(frames, ensure_ascii=False)
   
   agent = CCTVLLMAgent(results_json=results_json, frames_json=frames_json)
-  
-  
-
