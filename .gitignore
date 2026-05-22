@@ -92,3 +92,6 @@ temp/
 
 # System files
 Thumbs.db
+
+# Rag - chromadb
+chromadb/
