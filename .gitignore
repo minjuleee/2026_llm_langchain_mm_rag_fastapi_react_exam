@@ -95,3 +95,6 @@ Thumbs.db
 
 # Rag - chromadb
 chromadb/
+
+# wav
+*.wav
