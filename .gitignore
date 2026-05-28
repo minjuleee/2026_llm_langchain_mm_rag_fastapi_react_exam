@@ -98,3 +98,6 @@ chromadb/
 
 # wav
 *.wav
+
+# Chroma Whisper Radio
+chroma_whisper_radio/
