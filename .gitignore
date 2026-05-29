@@ -101,3 +101,6 @@ chromadb/
 
 # Chroma Whisper Radio
 chroma_whisper_radio/
+
+# mp3
+*.mp3
