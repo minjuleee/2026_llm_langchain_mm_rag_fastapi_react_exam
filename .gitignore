@@ -104,3 +104,6 @@ chroma_whisper_radio/
 
 # mp3
 *.mp3
+
+# vision 이미지 
+vision_sample/
