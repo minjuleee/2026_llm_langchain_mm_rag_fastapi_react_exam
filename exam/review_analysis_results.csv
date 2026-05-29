@@ -1,0 +1,4 @@
+﻿sentiment,positive_points,negative_points,summary,rating,review
+negative,[],['The product is considered a waste of money.'],The reviewer feels that the product was not worth the money spent.,2,이건 좀 돈 아깝네여
+negative,[],['The reviewer explicitly states that it is not good.'],The reviewer expresses dissatisfaction with the product.,2,얜 좀 별로
+neutral,"[""The reviewer mentions that the product is 'not bad', indicating some level of satisfaction.""]",[],"The reviewer finds the product to be satisfactory, expressing a neutral sentiment with no specific complaints.",3,근데 나쁘지 않은듯
