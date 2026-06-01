@@ -84,16 +84,16 @@ def json_parse(content:str) -> dict :
   text = re.sub(r"\s*```$",          "", text)          # 뒤쪽 ``` 제거
   return json.loads(text.strip())
 
-
+if __name__ == "__main__" :
 # ── 실행 ──────────────────────────────────────────────────────
-prompt = """이 이미지를 분석해서 아래 JSON 형식으로만 응답하세요.
-{
-  "subject": "이미지의 주요 피사체",
-  "description": "전체적인 설명 (2~3문장)",
-  "mood": "이미지의 분위기",
-  "colors": ["주요 색상1", "주요 색상2"]
-}"""
+  prompt = """이 이미지를 분석해서 아래 JSON 형식으로만 응답하세요.
+  {
+    "subject": "이미지의 주요 피사체",
+    "description": "전체적인 설명 (2~3문장)",
+    "mood": "이미지의 분위기",
+    "colors": ["주요 색상1", "주요 색상2"]
+  }"""
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
   result = analyze_image("./vision_sample/cat.jpeg", prompt)
   print(json.dumps(result, ensure_ascii=False, indent=2))
