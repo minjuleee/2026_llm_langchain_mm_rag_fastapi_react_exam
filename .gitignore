@@ -107,5 +107,6 @@ chroma_whisper_radio/
 
 # vision 이미지 
 vision_sample/
+images/
 
 image_vector_db/
