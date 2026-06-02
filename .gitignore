@@ -110,3 +110,4 @@ vision_sample/
 images/
 
 image_vector_db/
+runs/detect/
